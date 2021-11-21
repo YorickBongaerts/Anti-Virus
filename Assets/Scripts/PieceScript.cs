@@ -18,18 +18,19 @@ public class PieceScript : MonoBehaviour, IDragHandler,IBeginDragHandler, IEndDr
         Vector3 mousePos = Input.mousePosition;
         mousePos.z = 8;
         Vector3 movement = Camera.main.ScreenToWorldPoint(mousePos);
+        movement = movement - startingPosition;
         if (IsApproximatelyEqual(Mathf.Abs(movement.x), Mathf.Abs(movement.z),1f))
         {
             //probably snap in here instead of at the end (or maybe snap at both points in time)
-            movement.x = Mathf.Clamp(Mathf.Sign(movement.x) * (Mathf.Abs(movement.x) + Mathf.Abs(movement.z)) / 2,-3.5f, 3.5f);
-            movement.z = Mathf.Clamp(Mathf.Sign(movement.z) * Mathf.Abs(movement.x), -3.5f, 3.5f);
+            movement.x = Mathf.Clamp(Mathf.Sign(movement.x) * (Mathf.Abs(movement.x) + Mathf.Abs(movement.z)) / 2,-3.5f - startingPosition.x, 3.5f - startingPosition.x);
+            movement.z = Mathf.Clamp(Mathf.Sign(movement.z) * Mathf.Abs(movement.x), -3.5f -startingPosition.z, 3.5f- startingPosition.z);
+            movement += startingPosition;
             gameObject.transform.parent.position = movement;
         }
         else
         {
-            movement = startingPosition;
+            gameObject.transform.parent.position = startingPosition;
         }
-        gameObject.transform.parent.position = movement;
     }
 
     /// <summary>
