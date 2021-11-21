@@ -4,32 +4,37 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
-public class PieceScript : MonoBehaviour, IDragHandler,IBeginDragHandler, IEndDragHandler
+public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler
 {
     Vector3 startingPosition;
+    Vector3 dragOffset;
+    Vector3 mousePos;
     public void OnBeginDrag(PointerEventData eventData)
     {
         startingPosition = gameObject.transform.parent.position;
+        mousePos = eventData.position;
+        mousePos.z = 8;
+        dragOffset = Camera.main.ScreenToWorldPoint(mousePos) - this.gameObject.transform.position;
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        //FirstTry();
-        Vector3 mousePos = Input.mousePosition;
+        mousePos = eventData.position;
         mousePos.z = 8;
         Vector3 movement = Camera.main.ScreenToWorldPoint(mousePos);
         movement = movement - startingPosition;
         if (IsApproximatelyEqual(Mathf.Abs(movement.x), Mathf.Abs(movement.z),1f))
         {
-            //probably snap in here instead of at the end (or maybe snap at both points in time)
-            movement.x = Mathf.Clamp(Mathf.Sign(movement.x) * (Mathf.Abs(movement.x) + Mathf.Abs(movement.z)) / 2,-3.5f - startingPosition.x, 3.5f - startingPosition.x);
-            movement.z = Mathf.Clamp(Mathf.Sign(movement.z) * Mathf.Abs(movement.x), -3.5f -startingPosition.z, 3.5f- startingPosition.z);
+            movement.x = Mathf.Clamp(Mathf.Sign(movement.x) * (Mathf.Abs(movement.x) + Mathf.Abs(movement.z)) / 2,-3f - startingPosition.x, 3f - startingPosition.x);
+            movement.z = Mathf.Clamp(Mathf.Sign(movement.z) * Mathf.Abs(movement.x), -3f -startingPosition.z, 3f- startingPosition.z);
             movement += startingPosition;
-            gameObject.transform.parent.position = movement;
+            gameObject.transform.parent.position = movement + dragOffset;
         }
         else
         {
+            //reset position of selected piece + forcibly end the dragging, this way you don't get weird offsets on your piece while dragging
             gameObject.transform.parent.position = startingPosition;
+            eventData.pointerDrag = null;
         }
     }
 
@@ -53,7 +58,6 @@ public class PieceScript : MonoBehaviour, IDragHandler,IBeginDragHandler, IEndDr
         diagonalMovement = MovementHelper.MakeDiagonal(rawMovement);
         gameObject.transform.parent.position = diagonalMovement;
     }
-
     public void OnEndDrag(PointerEventData eventData)
     {
         //snaps the piece to the grid
@@ -61,14 +65,9 @@ public class PieceScript : MonoBehaviour, IDragHandler,IBeginDragHandler, IEndDr
             new Vector3(Snapping.Snap(gameObject.transform.parent.position.x, 1), 0, Snapping.Snap(gameObject.transform.parent.position.z, 1));
         
     }
-
     bool IsApproximatelyEqual(float a, float b, float treshold)
     {
         return (Mathf.Abs(a - b) < treshold);
     }
-    // Update is called once per frame
-    void Update()
-    {
-       
-    }
+    
 }
