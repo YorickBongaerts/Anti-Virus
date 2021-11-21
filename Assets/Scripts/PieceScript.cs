@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -12,6 +13,27 @@ public class PieceScript : MonoBehaviour, IDragHandler,IBeginDragHandler, IEndDr
     }
 
     public void OnDrag(PointerEventData eventData)
+    {
+        //FirstTry();
+        Vector3 mousePos = Input.mousePosition;
+        mousePos.z = 8;
+        Vector3 movement = Camera.main.ScreenToWorldPoint(mousePos);
+        if (IsApproximatelyEqual(Mathf.Abs(movement.x), Mathf.Abs(movement.z),0.25f))
+        {
+            //probably snap in here instead of at the end (or maybe snap at both points in time)
+            gameObject.transform.parent.position = movement;
+        }
+        else
+        {
+            movement = startingPosition;
+        }
+        gameObject.transform.parent.position = movement;
+    }
+
+    /// <summary>
+    /// kind of works, but not really
+    /// </summary>
+    private void FirstTry()
     {
         Vector3 mousePos = Input.mousePosition;
         mousePos.z = 8;
@@ -37,6 +59,10 @@ public class PieceScript : MonoBehaviour, IDragHandler,IBeginDragHandler, IEndDr
         
     }
 
+    bool IsApproximatelyEqual(float a, float b, float treshold)
+    {
+        return (Mathf.Abs(a - b) < treshold);
+    }
     // Update is called once per frame
     void Update()
     {

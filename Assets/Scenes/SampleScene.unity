@@ -618,6 +618,18 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 675604057748220067, guid: 2e1406ed9e31cea41949831cc2f4aa3d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 675604057748220067, guid: 2e1406ed9e31cea41949831cc2f4aa3d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 675604057748220067, guid: 2e1406ed9e31cea41949831cc2f4aa3d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8347757881681689195, guid: 2e1406ed9e31cea41949831cc2f4aa3d, type: 3}
       propertyPath: m_Name
       value: PieceBlocker
