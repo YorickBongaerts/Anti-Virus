@@ -9,6 +9,11 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
     Vector3 startingPosition;
     Vector3 dragOffset;
     Vector3 mousePos;
+    private GridBuilder GridBuilder;
+    private void Start()
+    {
+        GridBuilder = GameObject.FindObjectOfType<GridBuilder>();
+    }
     public void OnBeginDrag(PointerEventData eventData)
     {
         startingPosition = gameObject.transform.parent.position;
@@ -60,9 +65,22 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
     }
     public void OnEndDrag(PointerEventData eventData)
     {
+        GameObject currentSquare = GridBuilder.Grid[0,0];
         //snaps the piece to the grid
-        gameObject.transform.parent.position =
-            new Vector3(Snapping.Snap(gameObject.transform.parent.position.x, 1), 0, Snapping.Snap(gameObject.transform.parent.position.z, 1));
+        foreach (var gridSquare in GridBuilder.Grid)
+        {
+            if (gridSquare == null)
+            {
+                continue;
+            }
+            if ((gridSquare.transform.position - gameObject.transform.parent.position).magnitude < (currentSquare.transform.position - gameObject.transform.parent.position).magnitude)
+            {
+                currentSquare = gridSquare;
+            }
+        }
+        gameObject.transform.parent.position = currentSquare.transform.position;
+        //gameObject.transform.parent.position =
+            //new Vector3(Snapping.Snap(gameObject.transform.parent.position.x, 1), 0, Snapping.Snap(gameObject.transform.parent.position.z, 1));
         
     }
     bool IsApproximatelyEqual(float a, float b, float treshold)
