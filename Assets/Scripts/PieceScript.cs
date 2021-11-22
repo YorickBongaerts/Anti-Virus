@@ -10,9 +10,11 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
     Vector3 dragOffset;
     Vector3 mousePos;
     private GridBuilder GridBuilder;
+    Vector3 buildingBlockOffset;
     private void Start()
     {
         GridBuilder = GameObject.FindObjectOfType<GridBuilder>();
+        buildingBlockOffset = (gameObject.transform.parent.position - gameObject.transform.position);
     }
     public void OnBeginDrag(PointerEventData eventData)
     {
@@ -27,13 +29,13 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
         mousePos = eventData.position;
         mousePos.z = 8;
         Vector3 movement = Camera.main.ScreenToWorldPoint(mousePos);
-        movement = movement - startingPosition;
+        movement = movement - startingPosition - dragOffset + buildingBlockOffset;
         if (IsApproximatelyEqual(Mathf.Abs(movement.x), Mathf.Abs(movement.z),1f))
         {
             movement.x = Mathf.Clamp(Mathf.Sign(movement.x) * (Mathf.Abs(movement.x) + Mathf.Abs(movement.z)) / 2,-3f - startingPosition.x, 3f - startingPosition.x);
             movement.z = Mathf.Clamp(Mathf.Sign(movement.z) * Mathf.Abs(movement.x), -3f -startingPosition.z, 3f- startingPosition.z);
             movement += startingPosition;
-            gameObject.transform.parent.position = movement + dragOffset;
+            gameObject.transform.parent.position = movement; //- dragOffset + buildingBlockOffset;
         }
         else
         {
@@ -78,7 +80,7 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
                 currentSquare = gridSquare;
             }
         }
-        gameObject.transform.parent.position = currentSquare.transform.position;
+        gameObject.transform.parent.position = currentSquare.transform.position - buildingBlockOffset;
         //gameObject.transform.parent.position =
             //new Vector3(Snapping.Snap(gameObject.transform.parent.position.x, 1), 0, Snapping.Snap(gameObject.transform.parent.position.z, 1));
         
