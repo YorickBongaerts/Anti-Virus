@@ -33,10 +33,18 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
         movement = movement - startingPosition - dragOffset + buildingBlockOffset;
         if (IsApproximatelyEqual(Mathf.Abs(movement.x), Mathf.Abs(movement.z),1f))
         {
-            movement.x = Mathf.Clamp(Mathf.Sign(movement.x) * (Mathf.Abs(movement.x) + Mathf.Abs(movement.z)) / 2,-3f - startingPosition.x, 3f - startingPosition.x);
-            movement.z = Mathf.Clamp(Mathf.Sign(movement.z) * Mathf.Abs(movement.x), -3f -startingPosition.z, 3f- startingPosition.z);
+            movement.x = Mathf.Sign(movement.x) * (Mathf.Abs(movement.x) + Mathf.Abs(movement.z)) / 2;
+            movement.z = Mathf.Sign(movement.z) * Mathf.Abs(movement.x);
             movement += startingPosition;
-            gameObject.transform.parent.position = movement; //- dragOffset + buildingBlockOffset;
+            gameObject.transform.parent.position = movement;
+            foreach (Transform child in gameObject.transform.parent.GetComponentsInChildren<Transform>())
+            {
+                if (child.transform.position.x > 3.5 || child.transform.position.x < -3.5 || child.transform.position.z > 3.5 || child.transform.position.z < -3.5)
+                {
+                    gameObject.transform.parent.position = startingPosition;
+                    eventData.pointerDrag = null;
+                }
+            }
         }
         else
         {
@@ -44,6 +52,7 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
             gameObject.transform.parent.position = startingPosition;
             eventData.pointerDrag = null;
         }
+        
     }
 
     /// <summary>
@@ -82,9 +91,6 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
             }
         }
         gameObject.transform.parent.position = currentSquare.transform.position + buildingBlockOffset;
-        //gameObject.transform.parent.position =
-            //new Vector3(Snapping.Snap(gameObject.transform.parent.position.x, 1), 0, Snapping.Snap(gameObject.transform.parent.position.z, 1));
-        
     }
     bool IsApproximatelyEqual(float a, float b, float treshold)
     {
