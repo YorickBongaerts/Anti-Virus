@@ -9,6 +9,7 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
     Vector3 startingPosition;
     Vector3 dragOffset;
     Vector3 mousePos;
+    Vector3 movement;
     private GridBuilder GridBuilder;
     Vector3 buildingBlockOffset;
     private void Start()
@@ -28,7 +29,7 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
     {
         mousePos = eventData.position;
         mousePos.z = 8;
-        Vector3 movement = Camera.main.ScreenToWorldPoint(mousePos);
+        movement = Camera.main.ScreenToWorldPoint(mousePos);
         movement = movement - startingPosition - dragOffset + buildingBlockOffset;
         if (IsApproximatelyEqual(Mathf.Abs(movement.x), Mathf.Abs(movement.z),1f))
         {
@@ -75,12 +76,12 @@ public class PieceScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndD
             {
                 continue;
             }
-            if ((gridSquare.transform.position - gameObject.transform.parent.position).magnitude < (currentSquare.transform.position - gameObject.transform.parent.position).magnitude)
+            if ((gridSquare.transform.position - gameObject.transform.position).magnitude < (currentSquare.transform.position - gameObject.transform.position).magnitude)
             {
                 currentSquare = gridSquare;
             }
         }
-        gameObject.transform.parent.position = currentSquare.transform.position - buildingBlockOffset;
+        gameObject.transform.parent.position = currentSquare.transform.position + buildingBlockOffset;
         //gameObject.transform.parent.position =
             //new Vector3(Snapping.Snap(gameObject.transform.parent.position.x, 1), 0, Snapping.Snap(gameObject.transform.parent.position.z, 1));
         
