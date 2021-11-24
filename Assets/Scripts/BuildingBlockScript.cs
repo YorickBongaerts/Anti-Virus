@@ -1,3 +1,4 @@
+using Assets.Scripts;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,46 +7,35 @@ using UnityEngine.EventSystems;
 
 public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandler, IEndDragHandler
 {
-    Vector3 startingPosition;
-    Vector3 dragOffset;
-    Vector3 mousePos;
-    Vector3 movement;
-    private GridBuilder GridBuilder;
-    Vector3 buildingBlockOffset;
+    #region Variables
+    private Vector3 pieceStartingPosition;
+    private Vector3 mouseToCenterOfBuildingBlockDragOffset;
+    private Vector3 mousePosition;
+    private Vector3 dragToPosition;
+    private Vector3 buildingBlockToPieceCenterOffset;
     public bool IsBlocker = false;
+    private GridBuilder GridBuilder;
+    private MathHelper mathHelper;
+    GameObject NewlyAttachedPiece;
+    #endregion Variables
+
     private void Start()
     {
         GridBuilder = GameObject.FindObjectOfType<GridBuilder>();
-        buildingBlockOffset = (gameObject.transform.parent.position - gameObject.transform.position);
+        mathHelper = new MathHelper();
+        buildingBlockToPieceCenterOffset = (gameObject.transform.parent.position - gameObject.transform.position);
     }
+    
+    #region DragHandling
     public void OnBeginDrag(PointerEventData eventData)
     {
         if (!IsBlocker)
         {
             UnoccupyTiles();
-            startingPosition = gameObject.transform.parent.position;
-            mousePos = eventData.position;
-            mousePos.z = 8;
-            dragOffset = Camera.main.ScreenToWorldPoint(mousePos) - this.gameObject.transform.position;
-        }
-    }
-
-    private void UnoccupyTiles()
-    {
-        foreach (Transform child in gameObject.transform.parent.GetComponentsInChildren<Transform>())
-        {
-            foreach (GameObject tile in GridBuilder.Grid)
-            {
-                if (tile == null)
-                {
-                    continue;
-                }
-                if (IsApproximatelyEqual(child.transform.position, tile.transform.position, new Vector3(0.5f, 0, 0.5f)))
-                {
-                    tile.GetComponent<TileScript>().IsOccupied = false;
-                    Debug.Log("tile became unoccupied");
-                }
-            }
+            pieceStartingPosition = gameObject.transform.parent.position;
+            mousePosition = eventData.position;
+            mousePosition.z = 8;
+            mouseToCenterOfBuildingBlockDragOffset = Camera.main.ScreenToWorldPoint(mousePosition) - this.gameObject.transform.position;
         }
     }
 
@@ -53,36 +43,89 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
     {
         if (!IsBlocker)
         {
-            mousePos = eventData.position;
-            mousePos.z = 8;
-            movement = Camera.main.ScreenToWorldPoint(mousePos);
-            movement = movement - startingPosition - dragOffset + buildingBlockOffset;
-            if (IsApproximatelyEqual(Mathf.Abs(movement.x), Mathf.Abs(movement.z), 1f))
+            mousePosition = eventData.position;
+            mousePosition.z = 8;
+            dragToPosition = Camera.main.ScreenToWorldPoint(mousePosition);
+            dragToPosition = dragToPosition - pieceStartingPosition - mouseToCenterOfBuildingBlockDragOffset + buildingBlockToPieceCenterOffset;
+            if (mathHelper.IsApproximatelyEqual(Mathf.Abs(dragToPosition.x), Mathf.Abs(dragToPosition.z), 1f))
             {
-                movement.x = Mathf.Sign(movement.x) * (Mathf.Abs(movement.x) + Mathf.Abs(movement.z)) / 2;
-                movement.z = Mathf.Sign(movement.z) * Mathf.Abs(movement.x);
-                movement += startingPosition;
-                gameObject.transform.parent.position = movement;
+                //make sure the piece slides perfectly on diagonals by converting the components to have the same absolute value
+                dragToPosition.x = Mathf.Sign(dragToPosition.x) * (Mathf.Abs(dragToPosition.x) + Mathf.Abs(dragToPosition.z)) / 2;
+                dragToPosition.z = Mathf.Sign(dragToPosition.z) * Mathf.Abs(dragToPosition.x);
+                
+                dragToPosition += pieceStartingPosition;
+                gameObject.transform.parent.position = dragToPosition;
                 foreach (Transform child in gameObject.transform.parent.GetComponentsInChildren<Transform>())
                 {
-                    if (child.transform.position.x > 3.5 || child.transform.position.x < -3.5 || child.transform.position.z > 3.5 || child.transform.position.z < -3.5)
+                    if (child.transform.position.x > GridBuilder.GridSizeX ||
+                        child.transform.position.x < -GridBuilder.GridSizeX ||
+                        child.transform.position.z > GridBuilder.GridSizeY ||
+                        child.transform.position.z < -GridBuilder.GridSizeY)
                     {
-                        gameObject.transform.parent.position = startingPosition;
-                        eventData.pointerDrag = null;
-                        OccupyTiles();
+                        ForceEndDrag(eventData);
+                        //NewlyAttachedPiece?.transform.SetParent(null);
                     }
                 }
             }
             else
             {
                 //reset position of selected piece + forcibly end the dragging, this way you don't get weird offsets on your piece while dragging
-                gameObject.transform.parent.position = startingPosition;
-                eventData.pointerDrag = null;
-                OccupyTiles();
+                ForceEndDrag(eventData);
+                //NewlyAttachedPiece?.transform.SetParent(null);
             }
             PieceInteractionBlock(eventData);
         }
     }
+    
+    public void OnEndDrag(PointerEventData eventData)
+    {
+        if (!IsBlocker)
+        {
+            SnapPieceToGrid();
+            NewlyAttachedPiece?.transform.SetParent(null);
+            OccupyTiles();
+        }
+    }
+
+    /// <summary>
+    /// Cycles through all tiles of the grid to see which one is closest to this building block and then snaps the block to that tile
+    /// </summary>
+    private void SnapPieceToGrid()
+    {
+        GameObject CurrentClosestTile = GridBuilder.Grid[0, 0];
+        float currentClosestTileDistance = 100;
+        //snaps the piece to the grid
+        foreach (var gridSquare in GridBuilder.Grid)
+        {
+            if (gridSquare == null)
+            {
+                continue;
+            }
+            float currentTileDistance = (gridSquare.transform.position - gameObject.transform.position).magnitude;
+            currentClosestTileDistance = (CurrentClosestTile.transform.position - gameObject.transform.position).magnitude;
+            if (currentTileDistance < currentClosestTileDistance)
+            {
+                CurrentClosestTile = gridSquare;
+            }
+        }
+        gameObject.transform.parent.position = CurrentClosestTile.transform.position + buildingBlockToPieceCenterOffset;
+    }
+
+    private void ForceEndDrag(PointerEventData eventData)
+    {
+        gameObject.transform.parent.position = pieceStartingPosition;
+        eventData.pointerDrag = null;
+        NewlyAttachedPiece?.transform.SetParent(null);
+        GameObject[] attachedBuildingBlocks = NewlyAttachedPiece?.GetComponentsInChildren<GameObject>();
+        foreach (GameObject attachedBuildingBlock in attachedBuildingBlocks)
+        {
+            attachedBuildingBlock.GetComponent<BuildingBlockScript>().SnapPieceToGrid();
+            attachedBuildingBlock.GetComponent<BuildingBlockScript>().OccupyTiles();
+        }
+        OccupyTiles();
+    }
+
+    #endregion DragHandling
 
     private void PieceInteractionBlock(PointerEventData eventData)
     {
@@ -94,59 +137,41 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
                 {
                     continue;
                 }
-                if (tile.GetComponent<TileScript>().IsOccupied && IsApproximatelyEqual(child.transform.position,tile.transform.position,new Vector3(0.5f,0,0.5f)))
+                if (tile.GetComponent<TileScript>().IsOccupied && mathHelper.IsApproximatelyEqual(child.transform.position, tile.transform.position, new Vector3(0.9f, 0, 0.9f)))
                 {
-                    Debug.Log("piece is blocked");
-                    gameObject.transform.parent.position = startingPosition;
-                    eventData.pointerDrag = null;
-                    OccupyTiles();
+                    Debug.Log("piece is blocked by another piece");
+                    
+                    NewlyAttachedPiece = GridBuilder.GetBuildingBlockOfTile(tile).transform.parent.gameObject;
+                    if (NewlyAttachedPiece.GetComponentInChildren<BuildingBlockScript>().IsBlocker)
+                    {
+                        ForceEndDrag(eventData);
+                        return;
+                    }
+                    NewlyAttachedPiece.transform.SetParent(this.gameObject.transform.parent);
                 }
             }
         }
     }
 
-    /// <summary>
-    /// kind of works, but not really
-    /// </summary>
-    private void FirstTry()
+    #region TileOccupation
+    private void UnoccupyTiles()
     {
-        Vector3 mousePos = Input.mousePosition;
-        mousePos.z = 8;
-        Vector3 rawMovement = Camera.main.ScreenToWorldPoint(mousePos);
-        Vector3 diagonalMovement = MovementHelper.MakeDiagonal(rawMovement);
-        if (Mathf.Abs(diagonalMovement.x - startingPosition.x) > Mathf.Abs(diagonalMovement.z - startingPosition.z))
+        foreach (Transform child in gameObject.transform.parent.GetComponentsInChildren<Transform>())
         {
-            rawMovement.z = startingPosition.z;
-        }
-        else
-        {
-            rawMovement.x = startingPosition.x;
-        }
-        diagonalMovement = MovementHelper.MakeDiagonal(rawMovement);
-        gameObject.transform.parent.position = diagonalMovement;
-    }
-    public void OnEndDrag(PointerEventData eventData)
-    {
-        if (!IsBlocker)
-        {
-            GameObject currentSquare = GridBuilder.Grid[0, 0];
-            //snaps the piece to the grid
-            foreach (var gridSquare in GridBuilder.Grid)
+            foreach (GameObject tile in GridBuilder.Grid)
             {
-                if (gridSquare == null)
+                if (tile == null)
                 {
                     continue;
                 }
-                if ((gridSquare.transform.position - gameObject.transform.position).magnitude < (currentSquare.transform.position - gameObject.transform.position).magnitude)
+                if (mathHelper.IsApproximatelyEqual(child.transform.position, tile.transform.position, new Vector3(0.5f, 0, 0.5f)))
                 {
-                    currentSquare = gridSquare;
+                    tile.GetComponent<TileScript>().IsOccupied = false;
+                    Debug.Log("tile at" + tile.transform.position + " became unoccupied");
                 }
             }
-            gameObject.transform.parent.position = currentSquare.transform.position + buildingBlockOffset;
-            OccupyTiles();
         }
     }
-
     private void OccupyTiles()
     {
         foreach (Transform child in gameObject.transform.parent.GetComponentsInChildren<Transform>())
@@ -157,22 +182,14 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
                 {
                     continue;
                 }
-                if (IsApproximatelyEqual(child.transform.position, tile.transform.position, new Vector3(0.5f, 0, 0.5f)))
+                if (mathHelper.IsApproximatelyEqual(child.transform.position, tile.transform.position, new Vector3(0.5f, 0, 0.5f)))
                 {
                     tile.GetComponent<TileScript>().IsOccupied = true;
-                    Debug.Log("tile became occupied");
+                    Debug.Log("tile at" + tile.transform.position + " became occupied");
                 }
             }
         }
     }
-
-    bool IsApproximatelyEqual(float a, float b, float treshold)
-    {
-        return (Mathf.Abs(a - b) < treshold);
-    }
-    bool IsApproximatelyEqual(Vector3 a, Vector3 b, Vector3 treshold)
-    {
-        return (Mathf.Abs(a.x - b.x) < treshold.x && Mathf.Abs(a.z - b.z) < treshold.z);
-    }
+    #endregion TileOccupation
 
 }

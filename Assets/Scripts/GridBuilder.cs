@@ -1,3 +1,4 @@
+using Assets.Scripts;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,14 +9,16 @@ public class GridBuilder : MonoBehaviour
     private GameObject GridSquare, GridParent;
 
     [SerializeField]
-    private int GridSizeX, GridSizeY;
+    public int GridSizeX, GridSizeY;
 
     public GameObject[,] Grid;
-    bool ShouldCreate = true;
-    // Start is called before the first frame update
+    private bool ShouldCreate = true;
+    private MathHelper mathHelper;
+
     void Start()
     {
         Grid = new GameObject[GridSizeX, GridSizeY];
+        mathHelper = new MathHelper();
         for (int x = 0; x < GridSizeX; x++)
         {
             for (int y = 0; y < GridSizeY; y++)
@@ -31,10 +34,15 @@ public class GridBuilder : MonoBehaviour
         }
         GridParent.transform.position -= new Vector3(GridSizeX / 2, 0, GridSizeY / 2);
     }
-
-    // Update is called once per frame
-    void Update()
+    public GameObject GetBuildingBlockOfTile(GameObject tile)
     {
-        
+        foreach (BuildingBlockScript buildingBlock in GameObject.FindObjectsOfType<BuildingBlockScript>())
+        {
+            if (mathHelper.IsApproximatelyEqual(buildingBlock.transform.position, tile.transform.position,new Vector3(0.5f,0,0.5f)))
+            {
+                return buildingBlock.gameObject;
+            }
+        }
+        return null;
     }
 }
