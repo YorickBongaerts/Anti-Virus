@@ -16,7 +16,9 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
     public bool IsBlocker = false;
     private GridBuilder GridBuilder;
     private MathHelper mathHelper;
-    GameObject NewlyAttachedPiece;
+    GameObject NewlyAttachedPieceParent;
+    BuildingBlockScript[] NewlyAttachedBlocks;
+
     #endregion Variables
 
     private void Start()
@@ -57,12 +59,14 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
                 gameObject.transform.parent.position = dragToPosition;
                 foreach (Transform child in gameObject.transform.parent.GetComponentsInChildren<Transform>())
                 {
-                    if (child.transform.position.x > GridBuilder.GridSizeX ||
-                        child.transform.position.x < -GridBuilder.GridSizeX ||
-                        child.transform.position.z > GridBuilder.GridSizeY ||
-                        child.transform.position.z < -GridBuilder.GridSizeY)
+                    if (child.transform.position.x > GridBuilder.GridSizeX/2 ||
+                        child.transform.position.x < -GridBuilder.GridSizeX/2 ||
+                        child.transform.position.z > GridBuilder.GridSizeY/2 ||
+                        child.transform.position.z < -GridBuilder.GridSizeY/2)
                     {
-                        ForceEndDrag(eventData);
+                        gameObject.transform.parent.position = pieceStartingPosition;
+                        eventData.pointerDrag = null;
+                        OccupyTiles();
                         //NewlyAttachedPiece?.transform.SetParent(null);
                     }
                 }
@@ -82,7 +86,12 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
         if (!IsBlocker)
         {
             SnapPieceToGrid();
-            NewlyAttachedPiece?.transform.SetParent(null);
+            foreach (BuildingBlockScript block in NewlyAttachedBlocks)
+            {
+                block.transform.SetParent(NewlyAttachedPieceParent.transform);
+            }
+            NewlyAttachedBlocks[0].SnapPieceToGrid();
+            NewlyAttachedBlocks[0].OccupyTiles();
             OccupyTiles();
         }
     }
@@ -115,12 +124,11 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
     {
         gameObject.transform.parent.position = pieceStartingPosition;
         eventData.pointerDrag = null;
-        NewlyAttachedPiece?.transform.SetParent(null);
-        GameObject[] attachedBuildingBlocks = NewlyAttachedPiece?.GetComponentsInChildren<GameObject>();
-        foreach (GameObject attachedBuildingBlock in attachedBuildingBlocks)
+        foreach (BuildingBlockScript block in NewlyAttachedBlocks)
         {
-            attachedBuildingBlock.GetComponent<BuildingBlockScript>().SnapPieceToGrid();
-            attachedBuildingBlock.GetComponent<BuildingBlockScript>().OccupyTiles();
+            block.transform.SetParent(NewlyAttachedPieceParent.transform);
+            block.SnapPieceToGrid();
+            block.OccupyTiles();
         }
         OccupyTiles();
     }
@@ -141,13 +149,19 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
                 {
                     Debug.Log("piece is blocked by another piece");
                     
-                    NewlyAttachedPiece = GridBuilder.GetBuildingBlockOfTile(tile).transform.parent.gameObject;
-                    if (NewlyAttachedPiece.GetComponentInChildren<BuildingBlockScript>().IsBlocker)
+                    //every now and then, this is the wrong piece
+                    NewlyAttachedPieceParent = GridBuilder.GetBuildingBlockOfTile(tile).transform.parent.gameObject;
+                    NewlyAttachedBlocks = NewlyAttachedPieceParent.transform.GetComponentsInChildren<BuildingBlockScript>();
+                    
+                    foreach (BuildingBlockScript block in NewlyAttachedBlocks)
                     {
-                        ForceEndDrag(eventData);
-                        return;
+                        if (block.IsBlocker)
+                        {
+                            ForceEndDrag(eventData);
+                            return;
+                        }
+                        block.transform.SetParent(this.gameObject.transform.parent);
                     }
-                    NewlyAttachedPiece.transform.SetParent(this.gameObject.transform.parent);
                 }
             }
         }
