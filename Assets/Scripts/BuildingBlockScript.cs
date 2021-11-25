@@ -65,8 +65,7 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
                         child.transform.position.z < -GridBuilder.GridSizeY/2)
                     {
                         gameObject.transform.parent.position = pieceStartingPosition;
-                        eventData.pointerDrag = null;
-                        OccupyTiles();
+                        ForceEndDrag(eventData);
                         //NewlyAttachedPiece?.transform.SetParent(null);
                     }
                 }
@@ -122,14 +121,14 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
 
     private void ForceEndDrag(PointerEventData eventData)
     {
-        gameObject.transform.parent.position = pieceStartingPosition;
         eventData.pointerDrag = null;
+        gameObject.transform.parent.position = pieceStartingPosition;
         foreach (BuildingBlockScript block in NewlyAttachedBlocks)
         {
             block.transform.SetParent(NewlyAttachedPieceParent.transform);
-            block.SnapPieceToGrid();
-            block.OccupyTiles();
         }
+        NewlyAttachedBlocks[0].SnapPieceToGrid();
+        NewlyAttachedBlocks[0].OccupyTiles();
         OccupyTiles();
     }
 
@@ -145,20 +144,31 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
                 {
                     continue;
                 }
-                if (tile.GetComponent<TileScript>().IsOccupied && mathHelper.IsApproximatelyEqual(child.transform.position, tile.transform.position, new Vector3(0.9f, 0, 0.9f)))
+                if (tile.GetComponent<TileScript>().IsOccupied && mathHelper.IsApproximatelyEqual(child.transform.position, tile.transform.position, new Vector3(0.95f, 0, 0.95f)))
                 {
-                    Debug.Log("piece is blocked by another piece");
-                    
-                    //every now and then, this is the wrong piece
-                    NewlyAttachedPieceParent = GridBuilder.GetBuildingBlockOfTile(tile).transform.parent.gameObject;
+                    //Debug.Log("piece is blocked by another piece");
+                    if (GridBuilder.GetBuildingBlockOfTile(tile).transform.parent.gameObject == this.gameObject.transform.parent.gameObject)
+                    {
+                        Debug.Log("the same");
+                        continue;   
+                    }
+                    else
+                    {
+                        Debug.Log("parent changed");
+                        NewlyAttachedPieceParent = GridBuilder.GetBuildingBlockOfTile(tile).transform.parent.gameObject;
+                        Debug.Log(NewlyAttachedPieceParent.name);
+                    }
                     NewlyAttachedBlocks = NewlyAttachedPieceParent.transform.GetComponentsInChildren<BuildingBlockScript>();
                     
+                    //dit is fucky wucky
                     foreach (BuildingBlockScript block in NewlyAttachedBlocks)
                     {
                         if (block.IsBlocker)
                         {
                             ForceEndDrag(eventData);
-                            return;
+                            break;
+                            //continue;
+                            //return;
                         }
                         block.transform.SetParent(this.gameObject.transform.parent);
                     }
@@ -181,7 +191,7 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
                 if (mathHelper.IsApproximatelyEqual(child.transform.position, tile.transform.position, new Vector3(0.5f, 0, 0.5f)))
                 {
                     tile.GetComponent<TileScript>().IsOccupied = false;
-                    Debug.Log("tile at" + tile.transform.position + " became unoccupied");
+                    //Debug.Log("tile at" + tile.transform.position + " became unoccupied");
                 }
             }
         }
@@ -199,7 +209,7 @@ public class BuildingBlockScript : MonoBehaviour, IDragHandler, IBeginDragHandle
                 if (mathHelper.IsApproximatelyEqual(child.transform.position, tile.transform.position, new Vector3(0.5f, 0, 0.5f)))
                 {
                     tile.GetComponent<TileScript>().IsOccupied = true;
-                    Debug.Log("tile at" + tile.transform.position + " became occupied");
+                    //Debug.Log("tile at" + tile.transform.position + " became occupied");
                 }
             }
         }
